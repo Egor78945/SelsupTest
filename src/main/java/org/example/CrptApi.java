@@ -1,5 +1,6 @@
 package org.example;
 
+import com.google.gson.Gson;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.BasicHttpClientResponseHandler;
@@ -29,20 +30,19 @@ import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 
 public class CrptApi {
+    private final File pfxCertificate;
 
-    public String sign(String sign, File cer, String password) {
+    public CrptApi(File pfxCertificate) {
+        this.pfxCertificate = pfxCertificate;
+    }
+
+    public String sign(String password) {
         QualifiedElectronicSignatureSignificator<String> significator = new QualifiedElectronicSignatureSignificatorManager(new KeyStoreProviderManager("PKCS12"), new CMSSignedDataGeneratorProviderManager());
-        WebClient<String> webClient = new WebClientManager(HttpClients.createDefault());
-        try {
-            HttpGet get = HttpRequestBuilder.buildGet(new URI("https://ismp.crpt.ru/api/v3/auth/cert/key"), null);
-            String closeableHttpResponse = webClient.get(get);
-            System.out.println(closeableHttpResponse);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-        return significator.sign(sign, cer, password, "SHA256withRSA", true);
+        AuthenticationService<UserData> authenticationService = new AuthenticationServiceManager(new Gson(), new WebClientManager(HttpClients.createDefault()));
+        return significator.sign(authenticationService.authorize().getData(), pfxCertificate, password, "SHA256withRSA", true);
     }
 
     private interface QualifiedElectronicSignatureSignificator<S> {
@@ -142,7 +142,7 @@ public class CrptApi {
         }
     }
 
-    private interface WebClient <R> {
+    private interface WebClient<R> {
         R post(HttpPost httpEntity);
 
         R get(HttpGet httpGet);
@@ -193,6 +193,85 @@ public class CrptApi {
                 }
             }
             return httpPost;
+        }
+    }
+
+    private interface AuthenticationService<T> {
+        T authorize();
+
+        String authenticate(T data);
+    }
+
+    private static class AuthenticationServiceManager implements AuthenticationService<UserData> {
+        private final Gson gson;
+        private final WebClient<String> webClient;
+
+        public AuthenticationServiceManager(Gson gson, WebClient<String> webClient) {
+            this.gson = gson;
+            this.webClient = webClient;
+        }
+
+        @Override
+        public UserData authorize() {
+            try {
+                return gson.fromJson(webClient.get(HttpRequestBuilder.buildGet(new URI("https://ismp.crpt.ru/api/v3/auth/cert/key"), null)), UserData.class);
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public String authenticate(UserData data) {
+            return "";
+        }
+    }
+
+    private static class UserData {
+        private String uuid;
+        private String data;
+
+        public UserData(String uuid, String data) {
+            this.uuid = uuid;
+            this.data = data;
+        }
+
+        public UserData() {
+        }
+
+        public String getUuid() {
+            return uuid;
+        }
+
+        public void setUuid(String uuid) {
+            this.uuid = uuid;
+        }
+
+        public String getData() {
+            return data;
+        }
+
+        public void setData(String data) {
+            this.data = data;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+            UserData userData = (UserData) o;
+            return Objects.equals(uuid, userData.uuid);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(uuid);
+        }
+
+        @Override
+        public String toString() {
+            return "UserData{" +
+                    "uuid='" + uuid + '\'' +
+                    ", data='" + data + '\'' +
+                    '}';
         }
     }
 }

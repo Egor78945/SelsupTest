@@ -8,6 +8,6 @@ import java.io.File;
  */
 public class App {
     public static void main( String[] args ) {
-        System.out.println(new CrptApi().sign("FBYBVZPJEZEAZGQFLGPSKVUPVDRMJJ", new File("test_certificate.pfx"), "TestPassword123"));
+        System.out.println(new CrptApi(new File("test_certificate.pfx")).sign("TestPassword123"));
     }
 }
