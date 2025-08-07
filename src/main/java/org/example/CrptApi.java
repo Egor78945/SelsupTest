@@ -26,11 +26,11 @@ public class CrptApi {
 
     public String sign(String sign, File cer, String password) {
         QualifiedElectronicSignatureSignificator<String> significator = new QualifiedElectronicSignatureSignificatorManager(new KeyStoreProviderManager("PKCS12"), new CMSSignedDataGeneratorProviderManager());
-        return significator.sign(sign, cer, password, "SHA256withRSA");
+        return significator.sign(sign, cer, password, "SHA256withRSA", true);
     }
 
     private interface QualifiedElectronicSignatureSignificator<S> {
-        S sign(S toSign, File certificateFile, String password, String signAlgorithm);
+        S sign(S toSign, File certificateFile, String password, String signAlgorithm, boolean signSignature);
     }
 
     private static class QualifiedElectronicSignatureSignificatorManager implements QualifiedElectronicSignatureSignificator<String> {
@@ -44,7 +44,7 @@ public class CrptApi {
         }
 
         @Override
-        public String sign(String toSign, File certificateFile, String password, String signAlgorithm) {
+        public String sign(String toSign, File certificateFile, String password, String signAlgorithm, boolean signSignature) {
             KeyStore keyStore;
             String alias;
             PrivateKey privateKey;
