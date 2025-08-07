@@ -1,5 +1,10 @@
 package org.example;
 
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.BasicHttpClientResponseHandler;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.bouncycastle.cert.jcajce.JcaCertStore;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.cms.*;
@@ -12,6 +17,8 @@ import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.*;
@@ -21,11 +28,20 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Map;
 
 public class CrptApi {
 
     public String sign(String sign, File cer, String password) {
         QualifiedElectronicSignatureSignificator<String> significator = new QualifiedElectronicSignatureSignificatorManager(new KeyStoreProviderManager("PKCS12"), new CMSSignedDataGeneratorProviderManager());
+        WebClient<String> webClient = new WebClientManager(HttpClients.createDefault());
+        try {
+            HttpGet get = HttpRequestBuilder.buildGet(new URI("https://ismp.crpt.ru/api/v3/auth/cert/key"), null);
+            String closeableHttpResponse = webClient.get(get);
+            System.out.println(closeableHttpResponse);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
         return significator.sign(sign, cer, password, "SHA256withRSA", true);
     }
 
@@ -123,6 +139,60 @@ public class CrptApi {
             } catch (CMSException | CertificateEncodingException e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    private interface WebClient <R> {
+        R post(HttpPost httpEntity);
+
+        R get(HttpGet httpGet);
+    }
+
+    public static class WebClientManager implements WebClient<String> {
+        private final CloseableHttpClient httpClient;
+
+        public WebClientManager(CloseableHttpClient httpClient) {
+            this.httpClient = httpClient;
+        }
+
+        @Override
+        public String post(HttpPost httpEntity) {
+            try {
+                return httpClient.execute(httpEntity, new BasicHttpClientResponseHandler());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public String get(HttpGet httpGet) {
+            try {
+                return httpClient.execute(httpGet, new BasicHttpClientResponseHandler());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private static class HttpRequestBuilder {
+        private static HttpGet buildGet(URI uri, Map<String, String> headers) {
+            HttpGet httpGet = new HttpGet(uri);
+            if (headers != null) {
+                for (Map.Entry<String, String> header : headers.entrySet()) {
+                    httpGet.addHeader(header.getKey(), header.getValue());
+                }
+            }
+            return httpGet;
+        }
+
+        public static HttpPost buildPost(URI uri, Map<String, String> headers) {
+            HttpPost httpPost = new HttpPost(uri);
+            if (headers != null) {
+                for (Map.Entry<String, String> header : headers.entrySet()) {
+                    httpPost.addHeader(header.getKey(), header.getValue());
+                }
+            }
+            return httpPost;
         }
     }
 }
