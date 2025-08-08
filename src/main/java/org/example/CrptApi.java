@@ -96,6 +96,7 @@ public class CrptApi {
 
     /**
      * Получить авторизационные данные
+     *
      * @return {@link UserDataDTO}
      */
     public UserDataDTO getSignedAuthorizationData() {
@@ -106,6 +107,7 @@ public class CrptApi {
 
     /**
      * Получить аутентификационный токен, использу пользовательские авторизационные данные @{@link UserDataDTO}
+     *
      * @param userData пользовательские данные {@link UserDataDTO}
      * @return Токен аутентификации
      */
@@ -115,8 +117,9 @@ public class CrptApi {
 
     /**
      * Создать новый документ
+     *
      * @param document модель документа {@link DocumentDTO}
-     * @param token Токент аутентификации
+     * @param token    Токент аутентификации
      * @return Уникальный идентификатор новосозданного документа
      */
     public synchronized String createDocument(DocumentDTO document, String token) {
